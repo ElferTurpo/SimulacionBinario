@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulación de Árbol Binario de Búsqueda (BST)</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      flex-direction: column;
+    }
+    #container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #bst-container {
+      text-align: center;
+      position: relative;
+    }
+    .bst-node {
+      display: inline-block;
+      width: 40px;
+      height: 40px;
+      line-height: 40px;
+      border: 1px solid black;
+      border-radius: 50%;
+      text-align: center;
+      margin: 0 10px;
+      position: relative;
+      background-color: white;
+    }
+    .bst-node.highlighted {
+      background-color: yellow;
+    }
+    .bst-node.found {
+      background-color: red;
+    }
+    .bst-edge {
+      position: absolute;
+      z-index: -1;
+      height: 2px;
+      background-color: black;
+      transform-origin: top left;
+    }
+    .btn-container {
+      margin-top: 10px;
+    }
+    .btn {
+      margin: 5px;
+      padding: 8px 16px;
+      cursor: pointer;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      text-align: center;
+      text-decoration: none;
+      font-size: 16px;
+    }
+    #node-input-container {
+      margin-top: 20px;
+      text-align: center;
+    }
+    #result {
+      margin-top: 10px;
+      font-weight: bold;
+      white-space: pre-line;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div class="btn-container">
+      <button class="btn" onclick="insertNode()">Insertar Nodo</button>
+      <button class="btn" onclick="deleteNode()">Eliminar Nodo</button>
+      <button class="btn" onclick="searchNode()">Buscar Nodo</button>
+      <button class="btn" onclick="clearTree()">Limpiar Árbol</button>
+    </div>
+    <div id="node-input-container">
+      <label for="node-value">Ingresar valor:</label>
+      <input type="text" id="node-value">
+      <br>
+      <p id="result"></p>
+    </div>
+    <div id="bst-container">
+      <div id="bst"></div>
+    </div>
+  </div>
+
+  <script>
+    class TreeNode {
+      constructor(value) {
+        this.value = value;
+        this.left = null;
+        this.right = null;
+      }
+    }
+
+    let root = null;
+
+    async function insertNode() {
+      const value = parseInt(document.getElementById('node-value').value);
+      if (isNaN(value)) {
+        alert('Ingrese un valor numérico válido.');
+        return;
+      }
+      const newNode = new TreeNode(value);
+      root = await insert(root, newNode);
+      displayTree();
+    }
+
+    async function insert(node, newNode) {
+      if (node === null) {
+        return newNode;
+      }
+
+      highlightNode(node, 'yellow');
+      await sleep(500);
+
+      if (newNode.value < node.value) {
+        node.left = await insert(node.left, newNode);
+      } else {
+        node.right = await insert(node.right, newNode);
+      }
+
+      return node;
+    }
+
+    async function deleteNode() {
+      const value = parseInt(document.getElementById('node-value').value);
+      if (isNaN(value)) {
+        alert('Ingrese un valor numérico válido.');
+        return;
+      }
+      root = await deleteNodeFromBST(root, value);
+      displayTree();
+    }
+
+    async function deleteNodeFromBST(node, key) {
+      if (node === null) {
+        return null;
+      }
+
+      highlightNode(node, 'yellow');
+      await sleep(500);
+
+      if (key < node.value) {
+        node.left = await deleteNodeFromBST(node.left, key);
+      } else if (key > node.value) {
+        node.right = await deleteNodeFromBST(node.right, key);
+      } else {
+        if (node.left === null) {
+          return node.right;
+        } else if (node.right === null) {
+          return node.left;
+        }
+
+        node.value = minValue(node.right);
+        node.right = await deleteNodeFromBST(node.right, node.value);
+      }
+
+      return node;
+    }
+
+    function minValue(node) {
+      let minValue = node.value;
+      while (node.left !== null) {
+        minValue = node.left.value;
+        node = node.left;
+      }
+      return minValue;
+    }
+
+    async function searchNode() {
+      const value = parseInt(document.getElementById('node-value').value);
+      if (isNaN(value)) {
+        alert('Ingrese un valor numérico válido.');
+        return;
+      }
+      const result = await search(root, value);
+      const resultElement = document.getElementById('result');
+      
+      if (result.found) {
+        let description = `El valor ${value} está en el árbol.`;
+        description += `\nProfundidad: ${result.depth}`;
+        if (result.isRoot) {
+          description += '\nEs el nodo raíz.';
+        } else if (result.isLeaf) {
+          description += '\nEs un nodo hoja.';
+        } else {
+          description += '\nEs un nodo interno.';
+        }
+        if (result.hasLeftChild) description += '\nTiene hijo izquierdo.';
+        if (result.hasRightChild) description += '\nTiene hijo derecho.';
+        resultElement.innerText = description;
+      } else {
+        resultElement.innerText = `El valor ${value} no está en el árbol.\nProfundidad máxima alcanzada: ${result.depth}`;
+      }
+    }
+
+    async function search(node, key, depth = 0) {
+      if (node === null) {
+        return { found: false, depth: depth - 1 };
+      }
+
+      highlightNode(node, 'yellow');
+      await sleep(500);
+
+      if (node.value === key) {
+        highlightNode(node, 'red');
+        return {
+          found: true,
+          depth: depth,
+          isRoot: depth === 0,
+          isLeaf: !node.left && !node.right,
+          hasLeftChild: !!node.left,
+          hasRightChild: !!node.right
+        };
+      }
+
+      if (key < node.value) {
+        return await search(node.left, key, depth + 1);
+      } else {
+        return await search(node.right, key, depth + 1);
+      }
+    }
+
+    function clearTree() {
+      root = null;
+      displayTree();
+    }
+
+    function highlightNode(node, color) {
+      const nodeElement = document.querySelector(`.bst-node[data-value="${node.value}"]`);
+      if (nodeElement) {
+        nodeElement.classList.add('highlighted');
+        nodeElement.style.backgroundColor = color;
+      }
+    }
+
+    function unhighlightNodes() {
+      const nodes = document.querySelectorAll('.bst-node');
+      nodes.forEach(node => {
+        node.classList.remove('highlighted');
+        node.style.backgroundColor = 'white';
+      });
+    }
+
+    function displayTree() {
+      const bstElement = document.getElementById('bst');
+      bstElement.innerHTML = '';
+
+      if (!root) {
+        return;
+      }
+
+      const treeData = [];
+      generateTreeData(root, 0, 0, treeData);
+
+      treeData.forEach(levelData => {
+        const levelContainer = document.createElement('div');
+        levelContainer.classList.add('bst-level');
+
+        levelData.forEach(nodeData => {
+          const nodeElement = document.createElement('div');
+          nodeElement.classList.add('bst-node');
+          nodeElement.setAttribute('data-value', nodeData.value);
+          nodeElement.innerText = nodeData.value;
+
+          nodeElement.style.position = 'absolute';
+          nodeElement.style.left = `${nodeData.x}px`;
+          nodeElement.style.top = `${nodeData.y}px`;
+
+          levelContainer.appendChild(nodeElement);
+        });
+
+        bstElement.appendChild(levelContainer);
+      });
+
+      drawEdges(root);
+
+      unhighlightNodes();
+    }
+
+    function generateTreeData(node, x, y, treeData, level = 0) {
+      if (!node) {
+        return;
+      }
+
+      if (!treeData[level]) {
+        treeData[level] = [];
+      }
+
+      treeData[level].push({ value: node.value, x, y });
+
+      const gap = 40 * (Math.pow(2, 3 - level)); // Ajusta el espacio entre nodos según el nivel
+      const nextY = y + 80;
+
+      generateTreeData(node.left, x - gap, nextY, treeData, level + 1);
+      generateTreeData(node.right, x + gap, nextY, treeData, level + 1);
+    }
+
+    function drawEdges(node, parentX = null, parentY = null, level = 0) {
+      if (!node) {
+        return;
+      }
+
+      const nodeElement = document.querySelector(`.bst-node[data-value="${node.value}"]`);
+
+      if (parentX !== null && parentY !== null) {
+        const startX = parentX + 20;
+        const startY = parentY + 20;
+        const endX = parseInt(nodeElement.style.left) + 20;
+        const endY = parseInt(nodeElement.style.top) + 20;
+
+        const dx = endX - startX;
+        const dy = endY - startY;
+        const length = Math.sqrt(dx * dx + dy * dy);
+
+        const edge = document.createElement('div');
+        edge.classList.add('bst-edge');
+        edge.style.width = `${length}px`;
+        edge.style.left = `${startX}px`;
+        edge.style.top = `${startY}px`;
+        edge.style.transform = `rotate(${Math.atan2(dy, dx)}rad)`;
+
+        nodeElement.parentNode.appendChild(edge);
+      }
+
+      const nodeX = parseInt(nodeElement.style.left);
+      const nodeY = parseInt(nodeElement.style.top);
+
+      drawEdges(node.left, nodeX, nodeY, level + 1);
+      drawEdges(node.right, nodeX, nodeY, level + 1);
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+  </script>
+</body>
+</html>
